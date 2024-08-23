@@ -1,87 +1,91 @@
+# RustPad - Collaborative Real-Time Code Editor
 
+**RustPad** is a real-time collaborative code editor built with Rust and WebAssembly. It enables multiple users to simultaneously edit code in the browser with synchronized cursors, live previews, and collaboration features. RustPad empowers teams to work together on coding projects directly in the browser without needing additional installations or complex setups.
 
+## Problem it Solves
 
-RustPad
-RustPad is a real-time, collaborative code editor built with Rust. It enables multiple users to simultaneously work on the same document, with peer-to-peer synchronization ensuring all changes are updated in real time. RustPad is designed to be lightweight, efficient, and secure, offering syntax highlighting and integrated version control to streamline collaboration on coding projects.
+In the era of remote work and distributed teams, the need for effective real-time collaboration has become crucial. Traditional code editors and IDEs do not easily support multiple users editing the same document simultaneously. RustPad addresses this gap by enabling real-time collaborative editing directly in the browser, allowing developers to see their collaborators' changes and positions instantly. Whether it's brainstorming, coding interviews, or working on code reviews together, RustPad creates a fluid experience that enhances productivity and communication.
 
-Why RustPad?
-RustPad stands out for its:
+## How it Works
 
-Speed & Efficiency: Rust's memory safety and concurrency guarantees make RustPad perform faster and more reliably than traditional code editors.
-Peer-to-Peer Collaboration: RustPad utilizes peer-to-peer synchronization, ensuring low-latency communication without relying on a centralized server.
-Syntax Highlighting: With built-in support for syntax highlighting in multiple programming languages, RustPad offers an excellent coding experience.
-Version Control: RustPad tracks all code changes with built-in version control, enabling easy rollback and management of code history during collaborative sessions.
-Cross-Platform: RustPad is designed to be cross-platform, working seamlessly on web and desktop environments, giving developers flexibility and accessibility.
+RustPad is powered by WebSockets for real-time communication and WebAssembly (compiled from Rust) for high-performance backend logic. Here’s how it works:
 
+1. **Real-Time Collaboration**: As multiple users work on a document, RustPad broadcasts their edits in real-time. Each user sees the same document, updated instantly, with no delay.
+2. **Cursor Syncing**: Users’ cursors are tracked in real-time. Each collaborator's cursor is displayed with a unique color, so everyone knows where their teammates are working.
+3. **Chat Integration**: The built-in chat system enables users to communicate directly within the editor without the need for external messaging tools, keeping conversations contextually tied to the code.
+4. **Live Preview**: RustPad provides live previews for HTML, CSS, and JavaScript code, making it easier for front-end developers to see how their changes render in real-time.
+5. **Version History**: RustPad supports tracking changes with a version history, so users can revert to previous versions of the document if needed.
 
+### Video Demo
 
-Installation
-To install and build RustPad on your machine, follow these steps:
+Watch the video demo of **RustPad** in action, showing its core features and the collaborative editing experience: [Demo Link](#)
 
-Prerequisites
-Rust: Ensure that you have the latest version of Rust installed. You can install Rust by following the instructions at rust-lang.org.
+## Why You Should Adopt RustPad
 
-Cargo: Cargo, the Rust package manager, is required to build the project. It comes bundled with Rust.
+RustPad is designed for developers who value collaboration and productivity. With its smooth real-time editing features, RustPad is perfect for:
+- **Pair Programming**: Work together with your partner, no matter where they are.
+- **Code Reviews**: Collaboratively review code and make adjustments in real-time.
+- **Remote Teamwork**: Sync up with your team without the need for screen sharing, leveraging real-time collaboration.
+- **Learning and Teaching**: Perfect for code tutorials, online teaching, and mentoring, RustPad allows instructors and students to work together on the same codebase seamlessly.
 
-Web or Desktop Environment:
+RustPad’s unique combination of Rust and WebAssembly ensures that the editor performs efficiently, even with multiple collaborators, making it an ideal tool for fast-paced development environments.
 
-If you're running the web version, you'll need to have Node.js and npm installed for building the frontend.
-For the desktop version, Tauri needs to be installed (optional, depending on your deployment choice).
-Build and Run
-To build and run RustPad, follow the steps below:
+## Installation and Setup
 
-For Web-based RustPad:
-Clone the repository:
+### Prerequisites
+
+- **Rust** (Nightly Toolchain)
+- **wasm-pack** (For WebAssembly Compilation)
+- **Node.js** and **npm** (For managing frontend dependencies and running the development server)
+
+### Build and Run
+
+To get started with RustPad on your local machine, follow these steps:
+
+1. **Clone the Repository:**
+
+   ```bash
+   git clone https://github.com/yourusername/rustpad.git
+   cd rustpad
+Build the WebAssembly Project:
 
 bash
 Copy code
-git clone https://github.com/yourusername/rustpad.git
-cd rustpad
-Build the project:
+wasm-pack build --target web
+This command compiles the Rust code into WebAssembly and prepares the necessary bindings.
+
+Install Frontend Dependencies and Start the Development Server:
 
 bash
 Copy code
-cargo build --release
-Run the WebSocket server:
-
-bash
-Copy code
-cargo run --bin websocket-server
-Run the web UI:
-
-bash
-Copy code
-cd static
 npm install
 npm run start
-Open in Browser: Open your browser and navigate to http://localhost:3000/ to start using RustPad.
+This will start the frontend of RustPad at http://localhost:8080.
 
-For Desktop-based RustPad:
-Clone the repository:
+Run the WebSocket Server for Real-Time Collaboration:
 
-bash
-Copy code
-git clone https://github.com/yourusername/rustpad.git
-cd rustpad
-Install Tauri:
-Follow Tauri’s installation guide to ensure your system is set up.
-
-Build the desktop app:
+Navigate to the websocket-server/ directory and run the WebSocket server:
 
 bash
 Copy code
-cargo tauri build
-Run the desktop app:
+cd websocket-server
+cargo run
+The WebSocket server will be live on ws://localhost:3030.
+
+Building for Production
+To build the project for production deployment:
 
 bash
 Copy code
-cargo tauri dev
-How It Works
-Real-time Collaboration
-RustPad uses peer-to-peer WebSockets for real-time collaboration. When multiple users are editing a document, changes are sent to peers and applied immediately, keeping everyone’s code in sync without relying on a central server.
+npm run build
+This command will generate all necessary files in the dist/ folder for production use.
 
-Syntax Highlighting
-RustPad leverages the syntect library to provide syntax highlighting for a wide range of programming languages. This enhances code readability and makes collaboration more efficient.
+Usage
+Once the server is running, open http://localhost:8080 in your browser, and you can start collaborating with your team in real-time. Upon opening the editor, users can choose a username, and their changes will be synchronized with other collaborators immediately.
 
-Version Control
-RustPad includes a simple version control system to track and manage changes. Users can undo/redo operations and view a history of edits, making collaboration more organized and secure.
+Collaborative Editing: Every change you make is synchronized with others in real-time.
+Cursor Tracking: See your collaborators' cursor positions, allowing you to work together without stepping on each other’s toes.
+Chat and Communication: The built-in chat system enables contextual discussions right within the editor.
+License
+This project is licensed under the MIT License. See the LICENSE file for more details.
+
