@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>RustPad - Collaborative Code Editor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="codemirror/lib/codemirror.css">
+    <link rel="stylesheet" href="codemirror/theme/dracula.css"> <!-- Theme -->
+</head>
+
+<body>
+    <header>
+        <h1>RustPad</h1>
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Documentation</a></li>
+                <li><a href="#">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div id="editor-container">
+            <div id="sidebar">
+                <h2>Files</h2>
+                <ul id="file-list">
+                    <!-- File list will be dynamically populated here -->
+                </ul>
+            </div>
+
+            <div id="editor">
+                <!-- The textarea will be replaced by CodeMirror -->
+                <textarea id="code-editor" name="code"></textarea>
+            </div>
+        </div>
+
+        <div id="status-bar">
+            <span id="status">Connecting...</span>
+            <span id="file-name">Untitled</span>
+            <span id="cursor-position">Line 1, Col 1</span>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2024 RustPad | Powered by Rust and WebAssembly</p>
+    </footer>
+
+    <!-- CodeMirror Scripts -->
+    <script src="codemirror/lib/codemirror.js"></script>
+    <script src="codemirror/mode/javascript/javascript.js"></script>
+    <script src="codemirror/mode/rust/rust.js"></script>
+    <script src="codemirror/addon/edit/matchbrackets.js"></script>
+    <script src="codemirror/addon/edit/closebrackets.js"></script>
+    <script src="codemirror/addon/display/simplescrollbars.js"></script>
+
+    <!-- WASM or JS integration -->
+    <script src="wasm.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // Initialize CodeMirror editor on the textarea element
+            const editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+                lineNumbers: true,
+                mode: 'javascript', // Change to 'rust' for RustPad
+                theme: 'dracula',    // Change theme as needed
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                scrollbarStyle: 'simple'
+            });
+
+            // Update cursor position in the status bar
+            const cursorPositionElement = document.getElementById('cursor-position');
+            editor.on('cursorActivity', () => {
+                const cursor = editor.getCursor();
+                cursorPositionElement.innerText = `Line ${cursor.line + 1}, Col ${cursor.ch + 1}`;
+            });
+
+            // WebSocket connections for collaborative editing
+            const user = prompt("Enter your username");
+            let socket = new WebSocket("ws://localhost:3030/collaborate");
+
+            socket.onopen = function () {
+                document.getElementById('status').innerText = "Connected";
+            };
+
+            socket.onclose = function () {
+                document.getElementById('status').innerText = "Disconnected";
+            };
+
+            socket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                if (data.content) {
+                    // Handle incoming collaborative edit
+                    editor.setValue(data.content);  // For simplicity, replace entire content
+                }
+            };
+
+            // Send edits to the server
+            editor.on('change', () => {
+                const content = editor.getValue();
+                const message = {
+                    user: user,
+                    content: content,
+                    cursor_position: editor.getCursor().ch,
+                    timestamp: new Date().toISOString()
+                };
+                socket.send(JSON.stringify(message));
+            });
+
+            // WebSocket for cursor synchronization
+            const cursorSocket = new WebSocket('ws://localhost:3030/cursors');
+            cursorSocket.onmessage = function (event) {
+                const cursors = JSON.parse(event.data);
+                cursors.forEach(cursor => {
+                    // Display collaborators' cursors in the editor
+                    // Implement custom cursor rendering logic here
+                });
+            };
+
+            // Send cursor updates to the server
+            editor.on('cursorActivity', () => {
+                const cursor = editor.getCursor();
+                const cursorMessage = {
+                    user: user,
+                    position: editor.indexFromPos(cursor),
+                    color: "#FF5733",  // Assign unique color for each user
+                };
+                cursorSocket.send(JSON.stringify(cursorMessage));
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,139 @@
+/* Basic setup for CodeMirror */
+.CodeMirror {
+    /* Positioning and display properties */
+    font-family: monospace;
+    height: auto;
+    position: relative;
+    overflow: hidden;
+    background: white;
+    cursor: text;
+  }
+  
+  /* Styling for line numbers */
+  .CodeMirror-gutters {
+    background-color: #f7f7f7;
+    border-right: 1px solid #ddd;
+    white-space: nowrap;
+  }
+  
+  /* The line number gutter */
+  .CodeMirror-linenumbers {
+    padding: 0 8px;
+    color: #999;
+  }
+  
+  /* Cursor styling */
+  .CodeMirror-cursor {
+    border-left: 1px solid black;
+    border-right: none;
+    width: 0;
+  }
+  
+  /* Highlighting the currently active line */
+  .CodeMirror-activeline-background {
+    background: #e8f2ff;
+  }
+  
+  /* Highlighting matching brackets */
+  .CodeMirror-matchingbracket {
+    text-decoration: underline;
+    color: #0b0;
+  }
+  
+  /* Placeholder for the editor's content */
+  .CodeMirror pre {
+    padding: 0 4px;
+  }
+  
+  /* Styling for the scrollbar */
+  .CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler {
+    background-color: white;
+  }
+  
+  /* Hide the horizontal scrollbar */
+  .CodeMirror-overlayscroll-horizontal {
+    overflow-x: hidden;
+  }
+  
+  .CodeMirror-scroll {
+    overflow: auto;
+    height: 100%;
+    outline: none;
+    position: relative;
+  }
+  
+  /* Editor line highlighting */
+  .CodeMirror-linebackground {
+    background: #f0f0f0;
+  }
+  
+  /* Syntax highlighting for comments */
+  .cm-comment {
+    color: #888;
+  }
+  
+  /* Syntax highlighting for keywords */
+  .cm-keyword {
+    color: #708;
+  }
+  
+  /* Syntax highlighting for strings */
+  .cm-string {
+    color: #a11;
+  }
+  
+  /* Syntax highlighting for numbers */
+  .cm-number {
+    color: #164;
+  }
+  
+  /* Syntax highlighting for functions */
+  .cm-def {
+    color: #00f;
+  }
+  
+  /* Selection highlighting */
+  .CodeMirror-selected {
+    background-color: rgba(0, 0, 255, 0.1);
+  }
+  
+  /* Inactive selection highlighting */
+  .CodeMirror-focused .CodeMirror-selected {
+    background-color: rgba(0, 0, 255, 0.1);
+  }
+  
+  /* Placeholder text styling */
+  .CodeMirror-placeholder {
+    color: #999;
+  }
+  
+  /* Focused state of the editor */
+  .CodeMirror-focused {
+    outline: none;
+  }
+  
+  /* Disable user selection outside of editor */
+  .CodeMirror-cursor, .CodeMirror-measure, .CodeMirror-code {
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Extra space around text inside the editor */
+  .CodeMirror pre {
+    padding-left: 8px;
+  }
+  
+  /* Styling for when the editor is read-only */
+  .CodeMirror-readonly .CodeMirror-cursor {
+    display: none;
+  }
+  
+  /* Styling for gutters (e.g., line numbers) */
+  .CodeMirror-guttermarker {
+    color: black;
+  }
+  .CodeMirror-guttermarker-subtle {
+    color: #999;
+  }
+  

@@ -1,0 +1,111 @@
+/* Dracula theme for CodeMirror */
+
+.cm-s-dracula.CodeMirror {
+    background: #282a36;
+    color: #f8f8f2;
+  }
+  
+  /* Line number styling */
+  .cm-s-dracula .CodeMirror-linenumber {
+    color: #6272a4;
+  }
+  
+  /* Gutter styling */
+  .cm-s-dracula .CodeMirror-gutters {
+    background: #282a36;
+    border-right: 0px;
+    color: #6272a4;
+  }
+  
+  /* Cursor styling */
+  .cm-s-dracula .CodeMirror-cursor {
+    border-left: 1px solid #f8f8f0;
+  }
+  
+  /* Selection styling */
+  .cm-s-dracula div.CodeMirror-selected {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Line highlighting */
+  .cm-s-dracula .CodeMirror-activeline-background {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Comment styling */
+  .cm-s-dracula span.cm-comment {
+    color: #6272a4;
+    font-style: italic;
+  }
+  
+  /* Keyword styling */
+  .cm-s-dracula span.cm-keyword {
+    color: #ff79c6;
+  }
+  
+  /* Atom and constant styling */
+  .cm-s-dracula span.cm-atom,
+  .cm-s-dracula span.cm-number {
+    color: #bd93f9;
+  }
+  
+  /* String styling */
+  .cm-s-dracula span.cm-string {
+    color: #f1fa8c;
+  }
+  
+  /* Variable styling */
+  .cm-s-dracula span.cm-variable {
+    color: #50fa7b;
+  }
+  
+  /* Defining function or method styling */
+  .cm-s-dracula span.cm-def {
+    color: #50fa7b;
+  }
+  
+  /* Operator and punctuation styling */
+  .cm-s-dracula span.cm-operator,
+  .cm-s-dracula span.cm-bracket {
+    color: #ff79c6;
+  }
+  
+  /* Error styling */
+  .cm-s-dracula span.cm-error {
+    color: #ff5555;
+  }
+  
+  /* Matching brackets */
+  .cm-s-dracula .CodeMirror-matchingbracket {
+    text-decoration: underline;
+    color: #50fa7b !important;
+  }
+  
+  /* Selection in the line */
+  .cm-s-dracula .CodeMirror-line::selection,
+  .cm-s-dracula .CodeMirror-line > span::selection,
+  .cm-s-dracula .CodeMirror-line > span > span::selection {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .cm-s-dracula .CodeMirror-line::-moz-selection,
+  .cm-s-dracula .CodeMirror-line > span::-moz-selection,
+  .cm-s-dracula .CodeMirror-line > span > span::-moz-selection {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Link styling */
+  .cm-s-dracula span.cm-link {
+    color: #ff79c6;
+  }
+  
+  /* Meta information styling */
+  .cm-s-dracula span.cm-meta {
+    color: #f8f8f2;
+  }
+  
+  /* Special styling for built-in functions */
+  .cm-s-dracula span.cm-builtin {
+    color: #8be9fd;
+  }
+  

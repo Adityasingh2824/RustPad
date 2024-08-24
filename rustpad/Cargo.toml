@@ -1,0 +1,46 @@
+[package]
+name = "rustpad"
+version = "0.1.0"
+edition = "2021"
+
+# Metadata for documentation and licensing (optional)
+authors = ["Your Name <your.email@example.com>"]
+description = "RustPad - A real-time collaborative code editor using Rust and WebSockets."
+license = "MIT"
+
+[dependencies]
+# Web framework and WebSocket support
+warp = "0.3"
+
+# Tokio runtime for async tasks and WebSocket handling
+tokio = { version = "1", features = ["full"] }
+
+# Serde for serialization/deserialization of JSON
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# UUID for generating unique client identifiers
+uuid = { version = "1", features = ["v4"] }
+
+# Broadcast channels and utilities for real-time message distribution
+tokio-stream = "0.1"
+tokio-util = "0.6"
+
+# Futures for async streams and sinks
+futures = "0.3"
+futures-util = "0.3"
+
+# WebAssembly support (optional, if you're compiling for the web)
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+# Test dependencies, if needed
+tokio-test = "0.4"
+
+[profile.release]
+opt-level = 3
+
+# Optional features for the project, like enabling WebAssembly support or desktop-specific features
+[features]
+wasm = []
+desktop = []
