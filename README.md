@@ -42,7 +42,7 @@ Follow these steps to set up RustPad:
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/yourusername/rustpad.git
+   git clone https://github.com/Adityasingh2824/RustPad.git
    cd rustpad
    cargo build
    cargo run
