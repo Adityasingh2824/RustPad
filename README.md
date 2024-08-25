@@ -57,8 +57,11 @@ Follow these steps to set up RustPad:
 Once everything is running, open http://localhost:8080 in your browser to start collaborating. Users can choose a username, and their changes will be synchronized with other collaborators in real-time.
 
 ### Features:
+
 **Collaborative Editing:** All changes are synchronized in real-time.
+
 **Cursor Tracking:** Collaborators' cursor positions are shown to prevent conflicts.
+
 **Chat:** In-editor chat allows for real-time discussion while working on the code.
 
 ## License
