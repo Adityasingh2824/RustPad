@@ -44,6 +44,8 @@ Follow these steps to set up RustPad:
    ```bash
    git clone https://github.com/yourusername/rustpad.git
    cd rustpad
+   cargo build
+   cargo run
 2. **Build the WebAssembly Project:**
     wasm-pack build --target web
 3. **Install Frontend Dependencies and Start the Development Server:**
