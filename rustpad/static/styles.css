@@ -19,6 +19,7 @@ header {
     background-color: #44475a;
     padding: 1rem;
     text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 header h1 {
@@ -48,6 +49,7 @@ nav ul li a:hover {
     display: flex;
     flex: 1;
     height: calc(100vh - 100px); /* Deduct header and footer height */
+    overflow: hidden;
 }
 
 /* Sidebar */
@@ -56,6 +58,7 @@ nav ul li a:hover {
     width: 250px;
     padding: 1rem;
     overflow-y: auto;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
 }
 
 #sidebar h2 {
@@ -72,10 +75,12 @@ nav ul li a:hover {
     padding: 0.5rem 0;
     cursor: pointer;
     border-bottom: 1px solid #6272a4;
+    transition: background-color 0.2s, color 0.2s;
 }
 
 #file-list li:hover {
     background-color: #6272a4;
+    color: #f8f8f2;
 }
 
 /* CodeMirror Editor */
@@ -84,6 +89,34 @@ nav ul li a:hover {
     background-color: #282a36;
     padding: 0;
     position: relative;
+    overflow: hidden;
+}
+
+.CodeMirror {
+    height: 100%;
+    font-size: 1rem;
+    line-height: 1.5;
+    background-color: #282a36;
+    color: #f8f8f2;
+}
+
+/* CodeMirror Theme Overrides */
+.CodeMirror-cursor {
+    border-left: 2px solid #ff79c6 !important; /* Customize the default cursor color */
+}
+
+.CodeMirror-linenumbers {
+    background-color: #44475a;
+    color: #6272a4;
+}
+
+/* Scrollbar Styles */
+.CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler {
+    background-color: #44475a;
+}
+
+.CodeMirror-scrollbar {
+    background-color: #6272a4;
 }
 
 /* Status Bar */
@@ -94,18 +127,34 @@ nav ul li a:hover {
     justify-content: space-between;
     align-items: center;
     color: #f8f8f2;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
 }
 
 #status-bar span {
     font-size: 0.9rem;
 }
 
-/* Cursor Styles for Collaboration */
+/* Footer */
+footer {
+    background-color: #44475a;
+    color: #f8f8f2;
+    text-align: center;
+    padding: 1rem;
+    font-size: 0.9rem;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+}
+
+footer p {
+    margin: 0;
+}
+
+/* Collaborative Cursors */
 .cursor {
     position: absolute;
     height: 1.2rem;
     width: 2px;
-    background-color: red;
+    background-color: #ff5555;
+    z-index: 10;
 }
 
 .cursor-label {
@@ -116,62 +165,72 @@ nav ul li a:hover {
     padding: 2px 5px;
     border-radius: 3px;
     transform: translateY(-120%);
+    z-index: 10;
 }
 
-/* Footer */
-footer {
-    background-color: #44475a;
-    color: #f8f8f2;
-    text-align: center;
-    padding: 1rem;
-    font-size: 0.9rem;
-}
-
-footer p {
-    margin: 0;
-}
-
-/* CodeMirror Theme Overrides */
-.CodeMirror {
-    height: 100%;
-    background-color: #282a36;
-    color: #f8f8f2;
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.CodeMirror-cursor {
-    border-left: 2px solid #ff79c6 !important; /* Customize the default cursor color */
-}
-
-/* Scrollbar Styles */
-.CodeMirror-scrollbar-filler, .CodeMirror-gutter-filler {
-    background-color: #44475a;
-}
-
-.CodeMirror-scrollbar {
-    background-color: #44475a;
-}
-
-.simplebar-scrollbar:before {
-    background-color: #6272a4;
-}
-
-.simplebar-track {
-    background-color: #44475a;
-}
-
-.CodeMirror .CodeMirror-scrollbar {
-    background-color: #6272a4;
-}
-
-.CodeMirror-linenumbers {
-    background-color: #44475a;
-    color: #6272a4;
-}
-
-/* Hover State for the Sidebar */
+/* Hover State for Sidebar Items */
 #file-list li:hover {
     background-color: #6272a4;
     color: #f8f8f2;
+}
+
+/* Button Styles */
+button {
+    background-color: #50fa7b;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    color: #282a36;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    width: 100%;
+}
+
+button:hover {
+    background-color: #40d96a;
+}
+
+button:focus {
+    outline: none;
+    box-shadow: 0 0 5px #50fa7b;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    #editor-container {
+        flex-direction: column;
+    }
+
+    #sidebar {
+        width: 100%;
+        height: auto;
+        padding: 0.5rem;
+    }
+
+    #editor {
+        height: 70vh;
+    }
+
+    #file-list li {
+        padding: 0.8rem;
+    }
+
+    button {
+        padding: 0.7rem;
+    }
+}
+
+/* Scrollbar Style for Sidebar */
+#sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+    background-color: #6272a4;
+    border-radius: 10px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+    background-color: #44475a;
 }

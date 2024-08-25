@@ -1,6 +1,5 @@
 use uuid::Uuid;
-use serde_json::json;
-use serde_json::Value;
+use serde_json::{json, Value};
 use warp::ws::Message;
 use std::error::Error;
 
@@ -12,22 +11,19 @@ pub fn generate_uuid() -> String {
 /// Serializes a given struct or value to a JSON string.
 /// Returns the serialized JSON string or an error.
 pub fn serialize_to_json<T: serde::Serialize>(value: &T) -> Result<String, Box<dyn Error>> {
-    let json_str = serde_json::to_string(value)?;
-    Ok(json_str)
+    serde_json::to_string(value).map_err(|e| e.into())
 }
 
 /// Deserializes a JSON string into a Rust data structure.
 /// Returns the deserialized data or an error.
 pub fn deserialize_from_json<T: serde::de::DeserializeOwned>(json_str: &str) -> Result<T, Box<dyn Error>> {
-    let data: T = serde_json::from_str(json_str)?;
-    Ok(data)
+    serde_json::from_str(json_str).map_err(|e| e.into())
 }
 
 /// Converts a string message into a WebSocket `Message`.
 /// Returns the WebSocket message or an error.
 pub fn string_to_ws_message(text: &str) -> Result<Message, Box<dyn Error>> {
-    let msg = Message::text(text);
-    Ok(msg)
+    Ok(Message::text(text.to_string()))
 }
 
 /// Converts a WebSocket message back into a string.
@@ -47,13 +43,11 @@ pub fn build_document_update(content: &str, user: &str) -> Result<String, Box<dy
         "content": content,
         "user": user
     });
-    let json_str = serde_json::to_string(&update)?;
-    Ok(json_str)
+    serde_json::to_string(&update).map_err(|e| e.into())
 }
 
 /// Parses the content from a received WebSocket message as a JSON value.
 /// Assumes the message is properly formatted JSON.
 pub fn parse_ws_message_as_json(message: &str) -> Result<Value, Box<dyn Error>> {
-    let parsed_json: Value = serde_json::from_str(message)?;
-    Ok(parsed_json)
+    serde_json::from_str(message).map_err(|e| e.into())
 }

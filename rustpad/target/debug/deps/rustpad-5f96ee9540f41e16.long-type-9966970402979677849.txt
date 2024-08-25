@@ -1,0 +1,1 @@
+futures_util::future::future::map::Map<futures_util::future::IntoFuture<impl warp::Future<Output = Result<(), Rejection>>>, futures_util::fns::MapErrFn<{closure@src/main.rs:70:104: 70:107}>>

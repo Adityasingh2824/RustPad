@@ -5,7 +5,27 @@ use serde::{Serialize, Deserialize};
 /// to apply changes to the document for synchronization between peers.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SyncMessage {
+    #[serde(with = "serde_diff_operation")]
     pub operations: Vec<DiffOperation>,
+}
+
+mod serde_diff_operation {
+    use super::*;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S>(operations: &[DiffOperation], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        operations.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<DiffOperation>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Vec::<DiffOperation>::deserialize(deserializer)
+    }
 }
 
 impl SyncMessage {

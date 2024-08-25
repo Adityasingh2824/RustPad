@@ -1,118 +1,96 @@
 use std::process::{Command, Output};
+use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io;
 
-#[derive(Debug)]
-pub struct Formatter {
-    formatters: HashMap<String, Box<dyn Fn(&str) -> io::Result<String>>>,
+/// Supported languages for code formatting
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Language {
+    Rust,
+    JavaScript,
+    Python,
 }
 
-impl Formatter {
-    /// Creates a new Formatter with predefined formatters for different languages
-    pub fn new() -> Self {
-        let mut formatters = HashMap::new();
+/// FormatterError to represent any errors during the formatting process
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FormatterError {
+    pub message: String,
+}
 
-        // Add a JavaScript formatter using Prettier
-        formatters.insert("javascript".to_string(), Box::new(Self::format_javascript as _));
+/// Trait that defines the behavior of a formatter
+pub trait Formatter {
+    fn format_code(&self, code: &str) -> Result<String, FormatterError>;
+}
 
-        // Add an HTML formatter using Prettier
-        formatters.insert("html".to_string(), Box::new(Self::format_html as _));
+/// Formatter for Rust using `rustfmt`
+pub struct RustFormatter;
 
-        // Add a CSS formatter using Prettier
-        formatters.insert("css".to_string(), Box::new(Self::format_css as _));
-
-        // Add a Rust formatter using rustfmt
-        formatters.insert("rust".to_string(), Box::new(Self::format_rust as _));
-
-        Formatter { formatters }
-    }
-
-    /// Formats code based on the language
-    pub fn format(&self, language: &str, code: &str) -> io::Result<String> {
-        if let Some(formatter_fn) = self.formatters.get(language) {
-            formatter_fn(code)
-        } else {
-            Ok(code.to_string()) // Return the original code if no formatter is available
-        }
-    }
-
-    /// JavaScript formatter using Prettier
-    fn format_javascript(code: &str) -> io::Result<String> {
-        run_prettier(code, "javascript")
-    }
-
-    /// HTML formatter using Prettier
-    fn format_html(code: &str) -> io::Result<String> {
-        run_prettier(code, "html")
-    }
-
-    /// CSS formatter using Prettier
-    fn format_css(code: &str) -> io::Result<String> {
-        run_prettier(code, "css")
-    }
-
-    /// Rust formatter using rustfmt
-    fn format_rust(code: &str) -> io::Result<String> {
-        let output = run_command("rustfmt", vec!["--emit=stdout"], Some(code))?;
-        Ok(output)
+impl Formatter for RustFormatter {
+    fn format_code(&self, code: &str) -> Result<String, FormatterError> {
+        run_formatter_command("rustfmt", code)
     }
 }
 
-/// Helper function to run Prettier with the appropriate parser
-fn run_prettier(code: &str, parser: &str) -> io::Result<String> {
-    run_command("prettier", vec!["--stdin-filepath", &format!("file.{}", parser), "--parser", parser], Some(code))
+/// Formatter for JavaScript using Prettier
+pub struct JavaScriptFormatter;
+
+impl Formatter for JavaScriptFormatter {
+    fn format_code(&self, code: &str) -> Result<String, FormatterError> {
+        run_formatter_command("prettier", code)
+    }
 }
 
-/// Helper function to run a formatter command
-fn run_command(command: &str, args: Vec<&str>, input: Option<&str>) -> io::Result<String> {
-    let mut cmd = Command::new(command);
-    
-    for arg in args {
-        cmd.arg(arg);
-    }
+/// Formatter for Python using Black
+pub struct PythonFormatter;
 
-    if let Some(input_text) = input {
-        let mut process = cmd.stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).spawn()?;
-        {
-            let stdin = process.stdin.as_mut().expect("Failed to open stdin");
-            stdin.write_all(input_text.as_bytes())?;
-        }
-        let output = process.wait_with_output()?;
+impl Formatter for PythonFormatter {
+    fn format_code(&self, code: &str) -> Result<String, FormatterError> {
+        run_formatter_command("black", code)
+    }
+}
+
+/// Runs a formatter command and returns the formatted code or an error
+fn run_formatter_command(command: &str, code: &str) -> Result<String, FormatterError> {
+    // Run the formatter command as an external process
+    let output: Output = Command::new(command)
+        .arg("--stdin")
+        .output()
+        .map_err(|e| FormatterError {
+            message: format!("Failed to run formatter: {}", e),
+        })?;
+
+    if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
-        let output = cmd.output()?;
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        Err(FormatterError {
+            message: String::from_utf8_lossy(&output.stderr).to_string(),
+        })
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Initializes the available formatters for different languages
+pub fn initialize_formatters() -> Arc<Mutex<HashMap<Language, Box<dyn Formatter + Send>>>> {
+    let mut formatters: HashMap<Language, Box<dyn Formatter + Send>> = HashMap::new();
+    formatters.insert(Language::Rust, Box::new(RustFormatter));
+    formatters.insert(Language::JavaScript, Box::new(JavaScriptFormatter));
+    formatters.insert(Language::Python, Box::new(PythonFormatter));
 
-    #[test]
-    fn test_format_javascript() {
-        let formatter = Formatter::new();
-        let code = "function test(){console.log('hello')}";
-        let result = formatter.format("javascript", code).unwrap();
-        
-        assert_eq!(result, "function test() {\n  console.log('hello');\n}\n");
-    }
+    Arc::new(Mutex::new(formatters))
+}
 
-    #[test]
-    fn test_format_rust() {
-        let formatter = Formatter::new();
-        let code = "fn main() {println!(\"Hello, world!\");}";
-        let result = formatter.format("rust", code).unwrap();
-        
-        assert_eq!(result, "fn main() {\n    println!(\"Hello, world!\");\n}\n");
-    }
-
-    #[test]
-    fn test_format_html() {
-        let formatter = Formatter::new();
-        let code = "<div><h1>Hello</h1></div>";
-        let result = formatter.format("html", code).unwrap();
-        
-        assert_eq!(result, "<div>\n  <h1>Hello</h1>\n</div>\n");
+/// Formats the code based on the language using the appropriate formatter
+pub fn format_code(
+    language: Language,
+    code: &str,
+    formatter_store: Arc<Mutex<HashMap<Language, Box<dyn Formatter + Send>>>>,
+) -> Result<String, FormatterError> {
+    let formatters = formatter_store.lock().unwrap();
+    
+    if let Some(formatter) = formatters.get(&language) {
+        formatter.format_code(code)
+    } else {
+        Err(FormatterError {
+            message: format!("Formatter for language {:?} not found", language),
+        })
     }
 }

@@ -1,135 +1,96 @@
 use std::collections::HashMap;
-use std::fs;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Snippet {
-    pub language: String,
-    pub trigger: String,
-    pub content: String,
+    pub name: String,       // The name of the snippet (e.g., "for-loop")
+    pub description: String, // A short description of the snippet
+    pub content: String,    // The actual code snippet
 }
 
-pub struct SnippetManager {
-    predefined_snippets: HashMap<String, Vec<Snippet>>,  // Stores predefined snippets by language
-    user_snippets_dir: PathBuf,                          // Directory for user-defined snippets
+impl Snippet {
+    pub fn new(name: &str, description: &str, content: &str) -> Self {
+        Snippet {
+            name: name.to_string(),
+            description: description.to_string(),
+            content: content.to_string(),
+        }
+    }
 }
 
-impl SnippetManager {
-    /// Creates a new SnippetManager
-    pub fn new(user_snippets_dir: &str) -> io::Result<Self> {
-        let dir = PathBuf::from(user_snippets_dir);
-        if !dir.exists() {
-            fs::create_dir_all(&dir)?;
-        }
-        Ok(Self {
-            predefined_snippets: HashMap::new(),
-            user_snippets_dir: dir,
-        })
+// Store for predefined and user-defined snippets.
+type SnippetStore = Arc<Mutex<HashMap<String, Snippet>>>;
+
+/// Adds a new snippet to the store.
+pub fn add_snippet(store: SnippetStore, snippet: Snippet) -> Result<(), String> {
+    let mut snippets = store.lock().unwrap();
+    
+    if snippets.contains_key(&snippet.name) {
+        return Err("A snippet with this name already exists.".to_string());
     }
 
-    /// Adds a predefined snippet
-    pub fn add_predefined_snippet(&mut self, snippet: Snippet) {
-        self.predefined_snippets
-            .entry(snippet.language.clone())
-            .or_default()
-            .push(snippet);
-    }
+    snippets.insert(snippet.name.clone(), snippet);
+    Ok(())
+}
 
-    /// Loads user-defined snippets from the filesystem
-    pub fn load_user_snippets(&self) -> io::Result<HashMap<String, Vec<Snippet>>> {
-        let mut user_snippets: HashMap<String, Vec<Snippet>> = HashMap::new();
-
-        for entry in fs::read_dir(&self.user_snippets_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                if let Some(snippet) = Self::load_snippet_from_file(&path)? {
-                    user_snippets
-                        .entry(snippet.language.clone())
-                        .or_default()
-                        .push(snippet);
-                }
-            }
-        }
-
-        Ok(user_snippets)
-    }
-
-    /// Saves a user-defined snippet to the filesystem
-    pub fn save_user_snippet(&self, snippet: Snippet) -> io::Result<()> {
-        let snippet_file = self.user_snippets_dir.join(format!("{}.snippet", snippet.trigger));
-        let mut file = fs::File::create(snippet_file)?;
-        writeln!(file, "{}", snippet.content)?;
+/// Updates an existing snippet in the store.
+pub fn update_snippet(store: SnippetStore, name: &str, new_content: &str) -> Result<(), String> {
+    let mut snippets = store.lock().unwrap();
+    
+    if let Some(snippet) = snippets.get_mut(name) {
+        snippet.content = new_content.to_string();
         Ok(())
-    }
-
-    /// Retrieves a snippet by its trigger
-    pub fn get_snippet(&self, language: &str, trigger: &str) -> Option<&Snippet> {
-        self.predefined_snippets
-            .get(language)
-            .and_then(|snippets| snippets.iter().find(|snippet| snippet.trigger == trigger))
-    }
-
-    /// Loads a snippet from a file (user-defined snippet)
-    fn load_snippet_from_file(path: &Path) -> io::Result<Option<Snippet>> {
-        if let Some(file_stem) = path.file_stem() {
-            let trigger = file_stem.to_string_lossy().to_string();
-            let content = fs::read_to_string(path)?;
-            // Assuming the file is named as `<language>_<trigger>.snippet`
-            if let Some((language, _)) = trigger.split_once('_') {
-                return Ok(Some(Snippet {
-                    language: language.to_string(),
-                    trigger: trigger.clone(),
-                    content,
-                }));
-            }
-        }
-        Ok(None)
+    } else {
+        Err("Snippet not found.".to_string())
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Deletes a snippet from the store.
+pub fn delete_snippet(store: SnippetStore, name: &str) -> Result<(), String> {
+    let mut snippets = store.lock().unwrap();
 
-    #[test]
-    fn test_predefined_snippets() {
-        let mut snippet_manager = SnippetManager::new("./snippets_test").unwrap();
-        let snippet = Snippet {
-            language: "rust".to_string(),
-            trigger: "fn_main".to_string(),
-            content: "fn main() {\n    println!(\"Hello, world!\");\n}".to_string(),
-        };
-
-        snippet_manager.add_predefined_snippet(snippet.clone());
-
-        let retrieved = snippet_manager.get_snippet("rust", "fn_main").unwrap();
-        assert_eq!(retrieved.content, snippet.content);
+    if snippets.remove(name).is_some() {
+        Ok(())
+    } else {
+        Err("Snippet not found.".to_string())
     }
+}
 
-    #[test]
-    fn test_save_and_load_user_snippet() {
-        let snippet_manager = SnippetManager::new("./snippets_test").unwrap();
-        let snippet = Snippet {
-            language: "rust".to_string(),
-            trigger: "fn_test".to_string(),
-            content: "fn test() {\n    assert!(true);\n}".to_string(),
-        };
+/// Retrieves a snippet by name.
+pub fn get_snippet(store: SnippetStore, name: &str) -> Option<Snippet> {
+    let snippets = store.lock().unwrap();
+    snippets.get(name).cloned()
+}
 
-        snippet_manager.save_user_snippet(snippet.clone()).unwrap();
+/// Lists all snippets.
+pub fn list_snippets(store: SnippetStore) -> Vec<Snippet> {
+    let snippets = store.lock().unwrap();
+    snippets.values().cloned().collect()
+}
 
-        let user_snippets = snippet_manager.load_user_snippets().unwrap();
-        let loaded_snippet = user_snippets
-            .get("rust")
-            .unwrap()
-            .iter()
-            .find(|s| s.trigger == "fn_test")
-            .unwrap();
+/// Initializes the store with predefined snippets.
+pub fn initialize_snippets(store: SnippetStore) {
+    let predefined_snippets = vec![
+        Snippet::new(
+            "for-loop",
+            "A basic for-loop in Rust",
+            "for i in 0..10 {\n    println!(\"{}\", i);\n}",
+        ),
+        Snippet::new(
+            "if-else",
+            "An if-else conditional in Rust",
+            "if condition {\n    // do something\n} else {\n    // do something else\n}",
+        ),
+        Snippet::new(
+            "function",
+            "A basic function in Rust",
+            "fn my_function() -> i32 {\n    // function body\n    return 42;\n}",
+        ),
+    ];
 
-        assert_eq!(loaded_snippet.content, snippet.content);
-
-        // Clean up
-        fs::remove_file("./snippets_test/fn_test.snippet").unwrap();
+    let mut snippets = store.lock().unwrap();
+    for snippet in predefined_snippets {
+        snippets.insert(snippet.name.clone(), snippet);
     }
 }

@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -29,8 +30,7 @@ impl FileStorage {
         let mut file = fs::File::create(&file_path)?;
         file.write_all(content.as_bytes())?;
 
-        let metadata = file.metadata()?;
-        let last_modified = metadata.modified()?.elapsed()?.as_secs().to_string();
+        let last_modified = Self::get_last_modified(&file_path)?;
 
         Ok(FileInfo {
             file_name: file_name.to_string(),
@@ -59,8 +59,7 @@ impl FileStorage {
         let new_path = self.base_dir.join(new_name);
         fs::rename(&old_path, &new_path)?;
 
-        let metadata = new_path.metadata()?;
-        let last_modified = metadata.modified()?.elapsed()?.as_secs().to_string();
+        let last_modified = Self::get_last_modified(&new_path)?;
 
         Ok(FileInfo {
             file_name: new_name.to_string(),
@@ -78,9 +77,8 @@ impl FileStorage {
             let path = entry.path();
 
             if path.is_file() {
-                let file_name = entry.file_name().into_string().unwrap();
-                let metadata = entry.metadata()?;
-                let last_modified = metadata.modified()?.elapsed()?.as_secs().to_string();
+                let file_name = entry.file_name().into_string().unwrap_or_default();
+                let last_modified = Self::get_last_modified(&path)?;
 
                 files.push(FileInfo {
                     file_name,
@@ -91,6 +89,22 @@ impl FileStorage {
         }
 
         Ok(files)
+    }
+
+    /// Helper function to get the last modified time as a human-readable string.
+    fn get_last_modified(path: &Path) -> io::Result<String> {
+        let metadata = fs::metadata(path)?;
+        let modified_time = metadata.modified()?;
+
+        // Convert to the UNIX timestamp and then to human-readable time
+        let duration_since_epoch = modified_time
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default();
+
+        // Convert to seconds since epoch
+        let timestamp = duration_since_epoch.as_secs();
+
+        Ok(timestamp.to_string())  // For simplicity, we're just returning the timestamp as a string.
     }
 }
 

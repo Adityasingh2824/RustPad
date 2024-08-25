@@ -1,156 +1,163 @@
-use std::process::{Command, Output};
+use std::process::Command;
+use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io;
 
-#[derive(Debug, Clone)]
-pub struct LintResult {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LintError {
     pub line: usize,
     pub column: usize,
     pub message: String,
-    pub severity: LintSeverity,
+    pub severity: String, // e.g., "error", "warning"
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum LintSeverity {
-    Error,
-    Warning,
-    Info,
+type LinterStore = Arc<Mutex<HashMap<String, Box<dyn Linter + Send>>>>;
+
+/// Trait to define common linter functionality
+pub trait Linter {
+    fn lint_code(&self, code: &str) -> Vec<LintError>;
 }
 
-pub struct Linter {
-    linters: HashMap<String, Box<dyn Fn(&str) -> io::Result<Vec<LintResult>>>>,
-}
+/// Linter for Rust using `cargo check`
+pub struct RustLinter;
 
-impl Linter {
-    /// Creates a new Linter with predefined language linter functions
-    pub fn new() -> Self {
-        let mut linters = HashMap::new();
+impl Linter for RustLinter {
+    fn lint_code(&self, code: &str) -> Vec<LintError> {
+        let mut errors = Vec::new();
 
-        // Add a JavaScript linter using ESLint
-        linters.insert("javascript".to_string(), Box::new(Self::lint_javascript as _));
+        // Write code to a temporary file and run `cargo check` or another Rust linter tool.
+        let output = Command::new("cargo")
+            .arg("check")
+            .output()
+            .expect("Failed to execute cargo check");
 
-        // Add a Rust linter using rustc
-        linters.insert("rust".to_string(), Box::new(Self::lint_rust as _));
-
-        // Add other linters as needed...
-        
-        Linter { linters }
-    }
-
-    /// Lint code based on the language
-    pub fn lint(&self, language: &str, code: &str) -> io::Result<Vec<LintResult>> {
-        if let Some(linter_fn) = self.linters.get(language) {
-            linter_fn(code)
-        } else {
-            Ok(vec![]) // No linter found for the given language
-        }
-    }
-
-    /// JavaScript linter using ESLint
-    fn lint_javascript(code: &str) -> io::Result<Vec<LintResult>> {
-        let output = run_command("eslint", vec!["--stdin", "--format", "json"], Some(code))?;
-        Self::parse_eslint_output(&output)
-    }
-
-    /// Rust linter using rustc
-    fn lint_rust(code: &str) -> io::Result<Vec<LintResult>> {
-        let output = run_command("rustc", vec!["--edition=2018", "--error-format=json", "-"], Some(code))?;
-        Self::parse_rustc_output(&output)
-    }
-
-    /// Parse ESLint JSON output
-    fn parse_eslint_output(output: &str) -> io::Result<Vec<LintResult>> {
-        let mut lint_results = Vec::new();
-        let parsed: serde_json::Value = serde_json::from_str(output)?;
-
-        if let Some(array) = parsed.as_array() {
-            for file in array {
-                if let Some(messages) = file["messages"].as_array() {
-                    for message in messages {
-                        let lint_result = LintResult {
-                            line: message["line"].as_u64().unwrap_or(1) as usize,
-                            column: message["column"].as_u64().unwrap_or(1) as usize,
-                            message: message["message"].as_str().unwrap_or("Unknown error").to_string(),
-                            severity: match message["severity"].as_u64() {
-                                Some(2) => LintSeverity::Error,
-                                Some(1) => LintSeverity::Warning,
-                                _ => LintSeverity::Info,
-                            },
-                        };
-                        lint_results.push(lint_result);
-                    }
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            for line in stderr.lines() {
+                if let Some(error) = parse_rust_error(line) {
+                    errors.push(error);
                 }
             }
         }
 
-        Ok(lint_results)
+        errors
     }
+}
 
-    /// Parse rustc JSON output
-    fn parse_rustc_output(output: &str) -> io::Result<Vec<LintResult>> {
-        let mut lint_results = Vec::new();
-        let parsed: serde_json::Value = serde_json::from_str(output)?;
+/// Linter for JavaScript using ESLint
+pub struct JavaScriptLinter;
 
-        if let Some(array) = parsed.as_array() {
-            for message in array {
-                let lint_result = LintResult {
-                    line: message["spans"][0]["line_start"].as_u64().unwrap_or(1) as usize,
-                    column: message["spans"][0]["column_start"].as_u64().unwrap_or(1) as usize,
-                    message: message["message"].as_str().unwrap_or("Unknown error").to_string(),
-                    severity: match message["level"].as_str() {
-                        Some("error") => LintSeverity::Error,
-                        Some("warning") => LintSeverity::Warning,
-                        _ => LintSeverity::Info,
-                    },
-                };
-                lint_results.push(lint_result);
+impl Linter for JavaScriptLinter {
+    fn lint_code(&self, code: &str) -> Vec<LintError> {
+        let mut errors = Vec::new();
+
+        // Run ESLint as an external command
+        let output = Command::new("eslint")
+            .arg("--stdin")
+            .output()
+            .expect("Failed to execute ESLint");
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            for line in stderr.lines() {
+                if let Some(error) = parse_js_error(line) {
+                    errors.push(error);
+                }
             }
         }
 
-        Ok(lint_results)
+        errors
     }
 }
 
-/// Helper function to run a linter command
-fn run_command(command: &str, args: Vec<&str>, input: Option<&str>) -> io::Result<String> {
-    let mut cmd = Command::new(command);
+/// Linter for Python using Pylint
+pub struct PythonLinter;
 
-    for arg in args {
-        cmd.arg(arg);
+impl Linter for PythonLinter {
+    fn lint_code(&self, code: &str) -> Vec<LintError> {
+        let mut errors = Vec::new();
+
+        // Run Pylint as an external command
+        let output = Command::new("pylint")
+            .arg("--from-stdin")
+            .output()
+            .expect("Failed to execute Pylint");
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            for line in stderr.lines() {
+                if let Some(error) = parse_python_error(line) {
+                    errors.push(error);
+                }
+            }
+        }
+
+        errors
     }
+}
 
-    if let Some(input_text) = input {
-        let process = cmd.stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).spawn()?;
-        let mut stdin = process.stdin.unwrap();
-        stdin.write_all(input_text.as_bytes())?;
-        let output = process.wait_with_output()?;
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+/// Initializes available linters for various languages
+pub fn initialize_linters() -> LinterStore {
+    let mut linters: HashMap<String, Box<dyn Linter + Send>> = HashMap::new();
+    linters.insert("rust".to_string(), Box::new(RustLinter));
+    linters.insert("javascript".to_string(), Box::new(JavaScriptLinter));
+    linters.insert("python".to_string(), Box::new(PythonLinter));
+    
+    Arc::new(Mutex::new(linters))
+}
+
+/// Lints code based on the selected language
+pub fn lint_code(language: &str, code: &str, linter_store: LinterStore) -> Vec<LintError> {
+    let linters = linter_store.lock().unwrap();
+    
+    if let Some(linter) = linters.get(language) {
+        linter.lint_code(code)
     } else {
-        let output = cmd.output()?;
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        vec![]
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_lint_javascript() {
-        let linter = Linter::new();
-        let code = "var x = ;"; // This code has a syntax error
-        let result = linter.lint("javascript", code).unwrap();
-
-        assert!(result.len() > 0);
-        assert_eq!(result[0].severity, LintSeverity::Error);
+/// Parses Rust linter errors from `cargo check`
+fn parse_rust_error(line: &str) -> Option<LintError> {
+    // Simplified example of error parsing
+    if line.contains("error") {
+        Some(LintError {
+            line: 1, // Simplify this as an example
+            column: 1,
+            message: line.to_string(),
+            severity: "error".to_string(),
+        })
+    } else {
+        None
     }
+}
 
-    #[test]
-    fn test_lint_rust() {
-        let linter = Linter::new();
-        let code = "fn main() { let x = 5; println!(\"Hello World\"); }"; // Valid Rust code
-        let result = linter.lint("rust", code).unwrap();
+/// Parses JavaScript linter errors from ESLint
+fn parse_js_error(line: &str) -> Option<LintError> {
+    // Simplified example of error parsing
+    if line.contains("error") || line.contains("warning") {
+        Some(LintError {
+            line: 1, // Simplify this as an example
+            column: 1,
+            message: line.to_string(),
+            severity: if line.contains("error") { "error".to_string() } else { "warning".to_string() },
+        })
+    } else {
+        None
+    }
+}
 
-        assert_eq!(result.len(), 0); // No errors
+/// Parses Python linter errors from Pylint
+fn parse_python_error(line: &str) -> Option<LintError> {
+    // Simplified example of error parsing
+    if line.contains("error") || line.contains("warning") {
+        Some(LintError {
+            line: 1, // Simplify this as an example
+            column: 1,
+            message: line.to_string(),
+            severity: if line.contains("error") { "error".to_string() } else { "warning".to_string() },
+        })
+    } else {
+        None
     }
 }

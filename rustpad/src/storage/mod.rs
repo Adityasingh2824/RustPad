@@ -1,5 +1,8 @@
 pub mod local_storage;
 pub mod ipfs_storage;
+pub mod theme;
+pub mod file_storage;
+
 
 use std::error::Error;
 

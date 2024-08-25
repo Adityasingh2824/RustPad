@@ -1,74 +1,77 @@
-use crate::editor::syntax_highlighting::HighlightedStyle;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
-/// Represents a color in hex format (e.g., "#FFFFFF" for white).
-pub type Color = String;
-
-/// `Theme` represents the color scheme and style settings for the editor's UI.
+/// Represents a theme, which includes a name and a set of colors.
+#[derive(Clone, Debug)]
 pub struct Theme {
-    pub background_color: Color,
-    pub text_color: Color,
-    pub keyword_color: Color,
-    pub string_color: Color,
-    pub comment_color: Color,
-    pub cursor_color: Color,
-    pub selection_color: Color,
-    pub gutter_background_color: Color,
-    pub gutter_text_color: Color,
-    pub line_highlight_color: Color,
+    pub name: String,
+    pub colors: HashMap<String, String>, // Map color names (e.g., "background") to hex codes (e.g., "#FFFFFF")
 }
 
-impl Theme {
-    /// Creates a default light theme.
-    pub fn light() -> Self {
-        Self {
-            background_color: "#FFFFFF".to_string(),
-            text_color: "#000000".to_string(),
-            keyword_color: "#0000FF".to_string(),
-            string_color: "#008000".to_string(),
-            comment_color: "#808080".to_string(),
-            cursor_color: "#000000".to_string(),
-            selection_color: "#ADD8E6".to_string(),
-            gutter_background_color: "#F0F0F0".to_string(),
-            gutter_text_color: "#000000".to_string(),
-            line_highlight_color: "#F0F8FF".to_string(),
-        }
-    }
+/// Type alias for storing themes in a thread-safe manner.
+pub type Themes = Arc<Mutex<HashMap<String, Theme>>>;
 
-    /// Creates a default dark theme.
-    pub fn dark() -> Self {
-        Self {
-            background_color: "#1E1E1E".to_string(),
-            text_color: "#DCDCDC".to_string(),
-            keyword_color: "#569CD6".to_string(),
-            string_color: "#D69D85".to_string(),
-            comment_color: "#6A9955".to_string(),
-            cursor_color: "#FFFFFF".to_string(),
-            selection_color: "#264F78".to_string(),
-            gutter_background_color: "#2E2E2E".to_string(),
-            gutter_text_color: "#858585".to_string(),
-            line_highlight_color: "#333333".to_string(),
-        }
-    }
+/// Initializes the theme store with default themes.
+pub fn initialize_themes() -> Themes {
+    let mut themes: HashMap<String, Theme> = HashMap::new();
 
-    /// Applies the theme to the editor's syntax highlighting styles.
-    pub fn apply_syntax_highlighting(&self) -> Vec<HighlightedStyle> {
-        vec![
-            HighlightedStyle {
-                color: self.keyword_color.clone(),
-                bold: true,
-                italic: false,
-            },
-            HighlightedStyle {
-                color: self.string_color.clone(),
-                bold: false,
-                italic: false,
-            },
-            HighlightedStyle {
-                color: self.comment_color.clone(),
-                bold: false,
-                italic: true,
-            },
-            // Additional syntax styles can be added here...
-        ]
+    // Example: Adding a default dark theme
+    let mut dark_theme_colors = HashMap::new();
+    dark_theme_colors.insert("background".to_string(), "#000000".to_string());
+    dark_theme_colors.insert("text".to_string(), "#FFFFFF".to_string());
+
+    let dark_theme = Theme {
+        name: "dark".to_string(),
+        colors: dark_theme_colors,
+    };
+
+    themes.insert(dark_theme.name.clone(), dark_theme);
+
+    // Return the themes wrapped in `Arc<Mutex<>>`
+    Arc::new(Mutex::new(themes))
+}
+
+/// Retrieves a theme by its name.
+pub fn get_theme(themes: Themes, theme_name: &str) -> Option<Theme> {
+    let themes = themes.lock().unwrap();
+    themes.get(theme_name).cloned()
+}
+
+/// Sets a new theme or updates an existing one.
+pub fn set_theme(themes: Themes, new_theme: Theme) -> Result<(), &'static str> {
+    let mut themes = themes.lock().unwrap();
+    themes.insert(new_theme.name.clone(), new_theme);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_theme_management() {
+        let themes = initialize_themes();
+
+        // Test retrieving a theme
+        let theme = get_theme(themes.clone(), "dark");
+        assert!(theme.is_some());
+        assert_eq!(theme.unwrap().name, "dark");
+
+        // Test setting a new theme
+        let mut new_colors = HashMap::new();
+        new_colors.insert("background".to_string(), "#FFFFFF".to_string());
+        new_colors.insert("text".to_string(), "#000000".to_string());
+
+        let new_theme = Theme {
+            name: "light".to_string(),
+            colors: new_colors,
+        };
+
+        assert!(set_theme(themes.clone(), new_theme.clone()).is_ok());
+
+        // Ensure the new theme was added
+        let theme = get_theme(themes, "light");
+        assert!(theme.is_some());
+        assert_eq!(theme.unwrap().name, "light");
     }
 }

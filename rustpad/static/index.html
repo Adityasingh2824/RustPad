@@ -12,7 +12,7 @@
     
     <!-- CodeMirror CSS -->
     <link rel="stylesheet" href="codemirror/lib/codemirror.css">
-    <link rel="stylesheet" href="codemirror/theme/dracula.css"> <!-- Theme -->
+    <link rel="stylesheet" href="codemirror/theme/dracula.css"> <!-- Default Theme -->
 </head>
 
 <body>
@@ -23,6 +23,7 @@
                 <li><a href="#">Home</a></li>
                 <li><a href="#">Documentation</a></li>
                 <li><a href="#">About</a></li>
+                <li><a href="#" id="theme-toggle">Toggle Theme</a></li>
             </ul>
         </nav>
     </header>
@@ -34,6 +35,8 @@
                 <ul id="file-list">
                     <!-- File list will be dynamically populated here -->
                 </ul>
+                <button id="save-file">Save File</button>
+                <button id="load-file">Load File</button>
             </div>
 
             <div id="editor">
@@ -76,56 +79,55 @@
                 scrollbarStyle: 'simple'
             });
 
-            // Update cursor position in the status bar
             const cursorPositionElement = document.getElementById('cursor-position');
+            const statusElement = document.getElementById('status');
+            const fileNameElement = document.getElementById('file-name');
+
+            // Update cursor position in the status bar
             editor.on('cursorActivity', () => {
                 const cursor = editor.getCursor();
                 cursorPositionElement.innerText = `Line ${cursor.line + 1}, Col ${cursor.ch + 1}`;
             });
 
-            // WebSocket connections for collaborative editing
+            // WebSocket for collaborative editing
             const user = prompt("Enter your username");
-            let socket = new WebSocket("ws://localhost:3030/collaborate");
+            let socket = new WebSocket("ws://localhost:8080/ws");
 
             socket.onopen = function () {
-                document.getElementById('status').innerText = "Connected";
+                statusElement.innerText = "Connected";
             };
 
             socket.onclose = function () {
-                document.getElementById('status').innerText = "Disconnected";
+                statusElement.innerText = "Disconnected";
             };
 
             socket.onmessage = function (event) {
                 const data = JSON.parse(event.data);
                 if (data.content) {
-                    // Handle incoming collaborative edit
-                    editor.setValue(data.content);  // For simplicity, replace entire content
+                    editor.setValue(data.content);  // Replace entire content for simplicity
                 }
             };
 
-            // Send edits to the server
             editor.on('change', () => {
                 const content = editor.getValue();
                 const message = {
                     user: user,
                     content: content,
-                    cursor_position: editor.getCursor().ch,
+                    cursor_position: editor.getCursor(),
                     timestamp: new Date().toISOString()
                 };
                 socket.send(JSON.stringify(message));
             });
 
             // WebSocket for cursor synchronization
-            const cursorSocket = new WebSocket('ws://localhost:3030/cursors');
+            const cursorSocket = new WebSocket('ws://localhost:8080/cursors');
             cursorSocket.onmessage = function (event) {
                 const cursors = JSON.parse(event.data);
                 cursors.forEach(cursor => {
-                    // Display collaborators' cursors in the editor
-                    // Implement custom cursor rendering logic here
+                    // Custom cursor rendering logic
                 });
             };
 
-            // Send cursor updates to the server
             editor.on('cursorActivity', () => {
                 const cursor = editor.getCursor();
                 const cursorMessage = {
@@ -134,6 +136,47 @@
                     color: "#FF5733",  // Assign unique color for each user
                 };
                 cursorSocket.send(JSON.stringify(cursorMessage));
+            });
+
+            // Save file handler
+            document.getElementById('save-file').addEventListener('click', () => {
+                const content = editor.getValue();
+                fetch('/save_file', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        file_name: fileNameElement.innerText,
+                        content: content
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('File saved successfully!');
+                })
+                .catch(error => console.error('Error saving file:', error));
+            });
+
+            // Load file handler
+            document.getElementById('load-file').addEventListener('click', () => {
+                const fileName = prompt("Enter the file name to load:");
+                fetch(`/load_file?file=${fileName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        editor.setValue(data.content);
+                        fileNameElement.innerText = fileName;
+                    })
+                    .catch(error => console.error('Error loading file:', error));
+            });
+
+            // Theme toggle logic
+            const themeToggle = document.getElementById('theme-toggle');
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = editor.getOption("theme");
+                const newTheme = currentTheme === "dracula" ? "default" : "dracula";
+                editor.setOption("theme", newTheme);
+                themeToggle.innerText = `Switch to ${newTheme === "dracula" ? "light" : "dark"} theme`;
             });
         });
     </script>

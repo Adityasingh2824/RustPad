@@ -1,145 +1,133 @@
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::io;
+use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 
-type ExtensionCallback = Box<dyn Fn(&str) -> io::Result<()> + Send + Sync>;
+/// Trait that defines the basic functionality of an extension
+pub trait Extension: Send + Sync {
+    /// Returns a unique identifier for the extension
+    fn id(&self) -> String;
 
-/// Represents an extension that can be added to the editor.
-#[derive(Debug, Clone)]
-pub struct Extension {
-    pub name: String,
+    /// Returns a short description of the extension
+    fn description(&self) -> String;
+
+    /// Initialization logic for the extension (optional)
+    fn initialize(&self) {
+        println!("Initializing extension: {}", self.description());
+    }
+}
+
+/// Represents a custom extension/plugin added by the user
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomExtension {
+    pub id: String,
     pub description: String,
-    pub on_load: Option<ExtensionCallback>,  // Optional function to call when extension is loaded
-    pub on_save: Option<ExtensionCallback>,  // Optional function to call when the file is saved
-    pub on_change: Option<ExtensionCallback>, // Optional function to call when the content changes
 }
 
-/// Manages editor extensions.
-pub struct ExtensionManager {
-    extensions: HashMap<String, Arc<Mutex<Extension>>>,  // Map from extension name to the extension itself
+impl Extension for CustomExtension {
+    fn id(&self) -> String {
+        self.id.clone()
+    }
+
+    fn description(&self) -> String {
+        self.description.clone()
+    }
 }
 
-impl ExtensionManager {
-    /// Creates a new ExtensionManager.
-    pub fn new() -> Self {
-        ExtensionManager {
-            extensions: HashMap::new(),
-        }
-    }
+/// Store for managing installed extensions, using `Arc<Mutex<_>>` for thread-safe shared access
+pub type ExtensionStore = Arc<Mutex<HashMap<String, Arc<dyn Extension>>>>;
 
-    /// Registers a new extension by its name.
-    pub fn register_extension(&mut self, extension: Extension) {
-        self.extensions.insert(extension.name.clone(), Arc::new(Mutex::new(extension)));
-    }
+/// Initializes the extension store with built-in and user-defined extensions
+pub fn initialize_extensions() -> ExtensionStore {
+    let mut extensions: HashMap<String, Arc<dyn Extension>> = HashMap::new();
 
-    /// Loads an extension by invoking its `on_load` callback.
-    pub fn load_extension(&self, name: &str) -> io::Result<()> {
-        if let Some(extension) = self.extensions.get(name) {
-            if let Some(on_load) = &extension.lock().unwrap().on_load {
-                on_load(name)
-            } else {
-                Ok(())  // No load behavior, return Ok.
-            }
-        } else {
-            Err(io::Error::new(io::ErrorKind::NotFound, "Extension not found"))
-        }
-    }
+    // Example of a built-in extension
+    let autocomplete_extension: Arc<dyn Extension> = Arc::new(CustomExtension {
+        id: "autocomplete".to_string(),
+        description: "Provides autocompletion for common programming languages.".to_string(),
+    });
 
-    /// Calls the `on_save` callback for all extensions when a file is saved.
-    pub fn on_file_save(&self, file_path: &str) -> io::Result<()> {
-        for extension in self.extensions.values() {
-            if let Some(on_save) = &extension.lock().unwrap().on_save {
-                on_save(file_path)?;
-            }
-        }
+    // Insert the built-in extension into the store
+    extensions.insert(autocomplete_extension.id(), autocomplete_extension);
+
+    // Return the store wrapped in `Arc<Mutex<>>`
+    Arc::new(Mutex::new(extensions))
+}
+
+/// Adds a custom extension to the editor
+pub fn add_extension(extension_store: ExtensionStore, extension: Arc<dyn Extension>) -> Result<(), String> {
+    let mut store = extension_store.lock().unwrap();
+
+    if store.contains_key(&extension.id()) {
+        Err(format!("Extension with ID '{}' already exists.", extension.id()))
+    } else {
+        store.insert(extension.id(), extension);
         Ok(())
     }
+}
 
-    /// Calls the `on_change` callback for all extensions when content changes.
-    pub fn on_content_change(&self, new_content: &str) -> io::Result<()> {
-        for extension in self.extensions.values() {
-            if let Some(on_change) = &extension.lock().unwrap().on_change {
-                on_change(new_content)?;
-            }
-        }
+/// Removes an extension from the editor by its ID
+pub fn remove_extension(extension_store: ExtensionStore, extension_id: &str) -> Result<(), String> {
+    let mut store = extension_store.lock().unwrap();
+
+    if store.remove(extension_id).is_some() {
         Ok(())
+    } else {
+        Err(format!("Extension with ID '{}' not found.", extension_id))
     }
+}
 
-    /// Returns a list of all registered extensions.
-    pub fn list_extensions(&self) -> Vec<String> {
-        self.extensions.keys().cloned().collect()
+/// Lists all installed extensions by their IDs
+pub fn list_extensions(extension_store: ExtensionStore) -> Vec<String> {
+    let store = extension_store.lock().unwrap();
+    store.keys().cloned().collect()
+}
+
+/// Retrieves a specific extension by its ID
+pub fn get_extension(extension_store: ExtensionStore, extension_id: &str) -> Option<Arc<dyn Extension>> {
+    let store = extension_store.lock().unwrap();
+    store.get(extension_id).cloned()
+}
+
+/// Initializes all installed extensions
+pub fn initialize_all_extensions(extension_store: ExtensionStore) {
+    let store = extension_store.lock().unwrap();
+
+    for extension in store.values() {
+        extension.initialize();
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex};
 
     #[test]
-    fn test_register_and_load_extension() {
-        let mut manager = ExtensionManager::new();
+    fn test_extension_management() {
+        let extension_store = initialize_extensions();
 
-        let load_callback: ExtensionCallback = Box::new(|name: &str| {
-            println!("Extension {} loaded!", name);
-            Ok(())
+        // Test listing built-in extensions
+        let extensions = list_extensions(extension_store.clone());
+        assert!(extensions.contains(&"autocomplete".to_string()));
+
+        // Add a new extension
+        let custom_ext = Arc::new(CustomExtension {
+            id: "syntax_highlight".to_string(),
+            description: "Syntax highlighting for various languages.".to_string(),
         });
+        assert!(add_extension(extension_store.clone(), custom_ext.clone()).is_ok());
 
-        let extension = Extension {
-            name: "TestExtension".to_string(),
-            description: "A test extension".to_string(),
-            on_load: Some(load_callback),
-            on_save: None,
-            on_change: None,
-        };
+        // Ensure the new extension was added
+        let extensions = list_extensions(extension_store.clone());
+        assert!(extensions.contains(&"syntax_highlight".to_string()));
 
-        manager.register_extension(extension);
-        let result = manager.load_extension("TestExtension");
-        assert!(result.is_ok());
-    }
+        // Initialize all extensions
+        initialize_all_extensions(extension_store.clone());
 
-    #[test]
-    fn test_on_file_save_callback() {
-        let mut manager = ExtensionManager::new();
+        // Remove the extension
+        assert!(remove_extension(extension_store.clone(), "syntax_highlight").is_ok());
 
-        let save_callback: ExtensionCallback = Box::new(|file_path: &str| {
-            println!("File {} saved!", file_path);
-            Ok(())
-        });
-
-        let extension = Extension {
-            name: "SaveExtension".to_string(),
-            description: "An extension that hooks into file save".to_string(),
-            on_load: None,
-            on_save: Some(save_callback),
-            on_change: None,
-        };
-
-        manager.register_extension(extension);
-        let result = manager.on_file_save("example.txt");
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_on_content_change_callback() {
-        let mut manager = ExtensionManager::new();
-
-        let change_callback: ExtensionCallback = Box::new(|content: &str| {
-            println!("Content changed to: {}", content);
-            Ok(())
-        });
-
-        let extension = Extension {
-            name: "ChangeExtension".to_string(),
-            description: "An extension that hooks into content change".to_string(),
-            on_load: None,
-            on_save: None,
-            on_change: Some(change_callback),
-        };
-
-        manager.register_extension(extension);
-        let result = manager.on_content_change("New content");
-        assert!(result.is_ok());
+        // Ensure the extension was removed
+        let extensions = list_extensions(extension_store);
+        assert!(!extensions.contains(&"syntax_highlight".to_string()));
     }
 }

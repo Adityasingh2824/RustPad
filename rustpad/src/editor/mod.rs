@@ -4,6 +4,8 @@ pub mod version_control;
 pub mod events;
 pub mod state;
 pub mod diff_engine;
+pub mod extensions;
+
 
 use crate::editor::state::EditorState;
 use crate::editor::events::{EventHandler, InputEvent};

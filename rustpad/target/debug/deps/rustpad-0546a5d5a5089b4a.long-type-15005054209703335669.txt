@@ -1,0 +1,1 @@
+fn(Arc<std::sync::Mutex<HashMap<std::string::String, std::string::String>>>, std::string::String) -> impl warp::Future<Output = Result<impl Reply, Rejection>> {handle_get_theme}

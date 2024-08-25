@@ -3,10 +3,14 @@ name = "rustpad"
 version = "0.1.0"
 edition = "2021"
 
-# Metadata for documentation and licensing (optional)
+# Metadata for documentation and licensing
 authors = ["Your Name <your.email@example.com>"]
 description = "RustPad - A real-time collaborative code editor using Rust and WebSockets."
 license = "MIT"
+repository = "https://github.com/yourusername/rustpad"
+homepage = "https://yourwebsite.com/rustpad"
+documentation = "https://docs.yourwebsite.com/rustpad"
+readme = "README.md"
 
 [dependencies]
 # Web framework and WebSocket support
@@ -27,20 +31,29 @@ tokio-stream = "0.1"
 tokio-util = "0.6"
 
 # Futures for async streams and sinks
-futures = "0.3"
+futures = { version = "0.3", features = ["alloc"] }
 futures-util = "0.3"
 
-# WebAssembly support (optional, if you're compiling for the web)
+# For managing cookies in the Warp server
+cookie = "0.15"
+
+# Logging for debugging purposes
+log = "0.4"
+env_logger = "0.9"
+
+# Security utilities for cryptography and authentication (optional)
+ring = "0.16"
+
+# Optional WebAssembly support for client-side or web-based execution (optional)
 wasm-bindgen = "0.2"
 
 [dev-dependencies]
-# Test dependencies, if needed
+# Test dependencies
 tokio-test = "0.4"
 
 [profile.release]
 opt-level = 3
 
-# Optional features for the project, like enabling WebAssembly support or desktop-specific features
 [features]
 wasm = []
 desktop = []

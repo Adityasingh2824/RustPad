@@ -6,9 +6,9 @@ use crate::networking::peer_sync::PeerSync;
 /// `Editor` is the core structure that manages text input, cursor position,
 /// document state, and interactions with other modules like version control and peer sync.
 pub struct Editor {
-    state: EditorState,
-    version_control: VersionControl,
-    peer_sync: PeerSync,
+    pub state: EditorState,
+    pub version_control: VersionControl,
+    pub peer_sync: PeerSync,
 }
 
 impl Editor {
@@ -47,8 +47,8 @@ impl Editor {
     }
 
     /// Moves the cursor based on user input and updates the editor state.
-    pub fn move_cursor(&mut self, cursor_move: CursorMove) {
-        self.state.move_cursor(cursor_move);
+    pub fn move_cursor(&mut self, position: usize) {
+        self.state.move_cursor(position);
 
         // Optionally broadcast cursor movement to peers (for collaborative cursor tracking)
         self.peer_sync.broadcast_cursor(&self.state);
@@ -64,7 +64,7 @@ impl Editor {
                 self.delete_text(start, end);
             }
             InputEvent::MoveCursor(cursor_move) => {
-                self.move_cursor(cursor_move);
+                self.move_cursor(cursor_move as usize);
             }
             InputEvent::Undo => {
                 self.undo();
@@ -77,7 +77,7 @@ impl Editor {
 
     /// Undo the last change by retrieving a previous state from version control.
     pub fn undo(&mut self) {
-        if let Some(previous_state) = self.version_control.undo() {
+        if let Some(previous_state) = self.version_control.undo(&self.state) {
             self.state = previous_state;
 
             // Sync the reverted state with peers
@@ -87,7 +87,7 @@ impl Editor {
 
     /// Redo the last undone change by retrieving the next state from version control.
     pub fn redo(&mut self) {
-        if let Some(next_state) = self.version_control.redo() {
+        if let Some(next_state) = self.version_control.redo(&self.state) {
             self.state = next_state;
 
             // Sync the redone state with peers
@@ -100,4 +100,3 @@ impl Editor {
         &self.state
     }
 }
-

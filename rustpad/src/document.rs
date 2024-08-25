@@ -6,14 +6,20 @@ use serde::{Deserialize, Serialize};
 pub struct DocumentUpdate {
     pub content: String,
     pub user: String,
+    pub timestamp: String,  // Adding a timestamp to track when the update occurred
 }
 
 impl DocumentUpdate {
-    /// Creates a new `DocumentUpdate` with the given content and user.
+    /// Creates a new `DocumentUpdate` with the given content, user, and timestamp.
     pub fn new(content: &str, user: &str) -> Self {
         DocumentUpdate {
             content: content.to_string(),
             user: user.to_string(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                .to_string(),
         }
     }
 }
@@ -59,5 +65,10 @@ impl Document {
         } else {
             None // No more history to undo
         }
+    }
+
+    /// Redo functionality to apply the next state after an undo.
+    pub fn redo_update(&mut self, update: DocumentUpdate) {
+        self.apply_update(update);
     }
 }

@@ -1,0 +1,1 @@
+fn(Arc<std::sync::Mutex<HashMap<std::string::String, Box<(dyn std::marker::Send + Sync + 'static)>>>>, extensions::CustomExtension) -> impl warp::Future<Output = Result<impl Reply, Rejection>> {handle_add_extension}
